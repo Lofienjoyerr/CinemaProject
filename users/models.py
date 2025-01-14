@@ -32,21 +32,7 @@ def validate_phone_number(phone: str):
 
 
 class CustomUserManager(UserManager):
-    @classmethod
-    def normalize_email(cls, email: str) -> str:
-        if email:
-            try:
-                email_name, domain_part = email.strip().rsplit("@", 1)
-            except ValueError:
-                pass
-            else:
-                email = email_name + "@" + domain_part.lower()
-            return email
-
     def _create_user(self, email: str, password: str, **extra_fields):
-        if not email:
-            raise ValueError("You have to give email")
-
         email = self.normalize_email(email)
         user = self.model(email=email, password=password, **extra_fields)
         user.full_clean()
