@@ -13,6 +13,7 @@ class IsOwnerOrIsAdmin(permissions.BasePermission):
         return ((q_user.is_active and (q_user.is_staff or q_user.is_superuser))
                 or q_user == obj)
 
+
 class IsEmailOwnerOrIsAdmin(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         q_user = request.user

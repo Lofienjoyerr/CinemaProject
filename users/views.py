@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.status import HTTP_400_BAD_REQUEST
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .permissions import IsOwnerOrIsAdmin, IsEmailOwnerOrIsAdmin
@@ -62,6 +63,8 @@ class PasswordChangeView(APIView):
             raise AuthenticationFailed
 
     def post(self, request: Request) -> Response:
+        if request.data.get('new_password1') != request.data.get('new_password2'):
+            return Response({'detail': 'Пароли должны совпадать'}, status=HTTP_400_BAD_REQUEST)
         instance = self.get_user(request)
         serializer = PasswordChangeSerializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -70,9 +73,9 @@ class PasswordChangeView(APIView):
         if getattr(instance, '_prefetched_objects_cache', None):
             instance._prefetched_objects_cache = {}
 
-        return Response('Пароль успешно изменён!')
+        return Response({'detail': 'Пароль успешно изменён!'})
 
 
 class RegisterView(APIView):
     def post(self, request: Request):
-        pass
+        ...
