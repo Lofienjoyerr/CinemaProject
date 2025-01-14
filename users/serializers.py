@@ -16,6 +16,8 @@ User = get_user_model()
 
 class AdminUserDetailSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
+    password = serializers.ReadOnlyField()
+    date_joined = serializers.ReadOnlyField()
     last_login = serializers.ReadOnlyField()
 
     class Meta:
@@ -50,6 +52,8 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
 
 class UserDetailSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
+    password = serializers.ReadOnlyField()
+    date_joined = serializers.ReadOnlyField()
     last_login = serializers.ReadOnlyField()
 
     class Meta:
