@@ -54,7 +54,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     phone = models.CharField(unique=True, null=True, blank=True, validators=[validate_phone_number])
     name = models.CharField(max_length=254, default="Пользователь")
-    avatar = models.ImageField(upload_to=avatar_path, default="userapp/default_avatar.webp", storage=OverwriteStorage)
+    avatar = models.ImageField(upload_to=avatar_path, default="users/default_avatar.webp", storage=OverwriteStorage)
 
     is_active = models.BooleanField(default=True)
     is_superuser = models.BooleanField(default=False)

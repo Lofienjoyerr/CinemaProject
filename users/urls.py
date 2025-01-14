@@ -11,4 +11,5 @@ urlpatterns = [
     path('token/verify/', views.TokenVerifyView.as_view(), name='token_verify'),
     path('token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
     path('password/change/', views.PasswordChangeView.as_view(), name='password_change'),
+    path('register', views.RegisterView.as_view(), name='register')
 ]

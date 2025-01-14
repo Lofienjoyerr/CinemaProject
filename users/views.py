@@ -4,9 +4,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .permissions import IsOwnerOrIsAdmin
+from .permissions import IsOwnerOrIsAdmin, IsEmailOwnerOrIsAdmin
 from .serializers import (AdminUsersListSerializer, UsersListSerializer,
                           AdminUserDetailSerializer, UserDetailSerializer, PasswordChangeSerializer)
 
@@ -49,6 +50,8 @@ class TokenVerifyView(APIView):
 
 
 class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated, IsEmailOwnerOrIsAdmin]
+
     def get_user(self, request: Request) -> User:
         try:
             user = User.objects.get(email=request.data.get('email'))
@@ -68,3 +71,8 @@ class PasswordChangeView(APIView):
             instance._prefetched_objects_cache = {}
 
         return Response('Пароль успешно изменён!')
+
+
+class RegisterView(APIView):
+    def post(self, request: Request):
+        pass
