@@ -26,29 +26,6 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
                   'is_active', 'is_superuser', 'is_staff',
                   'date_joined', 'last_login']
 
-    def update(self, instance: User, validated_data: Dict[str, Any]) -> User:
-        raise_errors_on_nested_writes('update', self, validated_data)
-        info = model_meta.get_field_info(instance)
-
-        m2m_fields = []
-        for attr, value in validated_data.items():
-            if attr in info.relations and info.relations[attr].to_many:
-                m2m_fields.append((attr, value))
-            else:
-                if attr == 'password':
-                    raise ValidationError(
-                        'Запрещено таким образом менять пароль. Используйте api-url /password/change/')
-                else:
-                    setattr(instance, attr, value)
-
-        instance.save()
-
-        for attr, value in m2m_fields:
-            field = getattr(instance, attr)
-            field.set(value)
-
-        return instance
-
 
 class UserDetailSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
@@ -60,29 +37,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'email', 'phone', 'name', 'avatar', 'password',
                   'date_joined', 'last_login']
-
-    def update(self, instance: User, validated_data: Dict[str, Any]) -> User:
-        raise_errors_on_nested_writes('update', self, validated_data)
-        info = model_meta.get_field_info(instance)
-
-        m2m_fields = []
-        for attr, value in validated_data.items():
-            if attr in info.relations and info.relations[attr].to_many:
-                m2m_fields.append((attr, value))
-            else:
-                if attr == 'password':
-                    raise ValidationError(
-                        'Запрещено таким образом менять пароль. Используйте api-url /password/change/')
-                else:
-                    setattr(instance, attr, value)
-
-        instance.save()
-
-        for attr, value in m2m_fields:
-            field = getattr(instance, attr)
-            field.set(value)
-
-        return instance
 
 
 class AdminUsersListSerializer(serializers.HyperlinkedModelSerializer):
