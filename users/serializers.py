@@ -1,9 +1,9 @@
 from typing import Dict, Any
+from django.core.exceptions import ValidationError as djValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from rest_framework import serializers, exceptions
 from rest_framework.serializers import raise_errors_on_nested_writes
-from rest_framework.utils import model_meta
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import Token
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -113,4 +113,26 @@ class PasswordChangeSerializer(serializers.ModelSerializer):
         raise_errors_on_nested_writes('update', self, validated_data)
         instance.set_password(validated_data.get('new_password1'))
         instance.save()
+        return instance
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    password1 = serializers.CharField(required=True)
+    password2 = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'password1', 'password2']
+
+    def create(self, validated_data: Dict[str, Any]) -> User:
+        raise_errors_on_nested_writes('create', self, validated_data)
+        model_class = self.Meta.model
+        validated_data['password'] = validated_data.pop('password1')
+        validated_data.pop('password2')
+        try:
+            instance = model_class._default_manager.create(**validated_data)
+        except djValidationError:
+            raise ValidationError({'detail': 'Пользователь с таким email уже существует'})
+
         return instance

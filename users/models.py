@@ -4,8 +4,10 @@ from django.core.files.storage import FileSystemStorage
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, UserManager
 from PIL import Image
 import re, os
+from string import ascii_letters
+from random import choice
 
-from core.settings import MEDIA_ROOT
+from core.settings import MEDIA_ROOT, EMAIL_CONFIRM_TOKEN_LENGTH
 
 
 class OverwriteStorage(FileSystemStorage):
@@ -51,7 +53,7 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, max_length=128)
     phone = models.CharField(unique=True, null=True, blank=True, validators=[validate_phone_number])
     name = models.CharField(max_length=254, default="Пользователь")
     avatar = models.ImageField(upload_to=avatar_path, default="users/default_avatar.webp", storage=OverwriteStorage)
@@ -86,3 +88,34 @@ class User(AbstractBaseUser, PermissionsMixin):
         with Image.open(os.path.join(MEDIA_ROOT, self.avatar.name)) as im:
             im = im.resize((220, 220))
             im.save(os.path.join(MEDIA_ROOT, self.avatar.name))
+
+
+class EmailAddressManager(models.Manager):
+    def create(self, email_address: str, user: int):
+        email_address = self.model(email_address=email_address, user=user)
+        email_address.save(using=self._db)
+        return email_address
+
+
+class EmailAddress(models.Model):
+    email_address = models.EmailField(unique=True, max_length=128)
+    verified = models.BooleanField(default=False)
+    user = models.OneToOneField('User', on_delete=models.CASCADE, related_name='email_address')
+
+    objects = EmailAddressManager()
+
+
+class EmailVerifyTokenManager(models.Manager):
+    def create(self, email_address: int) -> str:
+        token = "".join([choice(ascii_letters) for _ in range(EMAIL_CONFIRM_TOKEN_LENGTH)])
+        evt = self.model(token=token, email_address=email_address)
+        evt.save(using=self._db)
+        return token
+
+
+class EmailVerifyToken(models.Model):
+    token = models.CharField(max_length=64)
+    created = models.DateTimeField(auto_now_add=True)
+    email_address = models.ForeignKey('EmailAddress', on_delete=models.CASCADE, related_name='tokens')
+
+    objects = EmailVerifyTokenManager()
