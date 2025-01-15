@@ -10,12 +10,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 
 from users.authentication import JWTEmailOrPhoneBackend
+from users.services import create_email
 
 User = get_user_model()
 
 
 class AdminUserDetailSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
+    email = serializers.ReadOnlyField()
     password = serializers.ReadOnlyField()
     date_joined = serializers.ReadOnlyField()
     last_login = serializers.ReadOnlyField()
@@ -29,6 +31,7 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
 
 class UserDetailSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
+    email = serializers.ReadOnlyField()
     password = serializers.ReadOnlyField()
     date_joined = serializers.ReadOnlyField()
     last_login = serializers.ReadOnlyField()
@@ -100,10 +103,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class PasswordChangeSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(required=True)
-    old_password = serializers.CharField(required=True)
-    new_password1 = serializers.CharField(required=True)
-    new_password2 = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True, max_length=128)
+    old_password = serializers.CharField(required=True, max_length=128)
+    new_password1 = serializers.CharField(required=True, max_length=128)
+    new_password2 = serializers.CharField(required=True, max_length=128)
 
     class Meta:
         model = User
@@ -117,9 +120,9 @@ class PasswordChangeSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(required=True)
-    password1 = serializers.CharField(required=True)
-    password2 = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True, max_length=128)
+    password1 = serializers.CharField(required=True, max_length=128)
+    password2 = serializers.CharField(required=True, max_length=128)
 
     class Meta:
         model = User
@@ -134,5 +137,25 @@ class RegisterSerializer(serializers.ModelSerializer):
             instance = model_class._default_manager.create(**validated_data)
         except djValidationError:
             raise ValidationError({'detail': 'Пользователь с таким email уже существует'})
+
+        return instance
+
+
+class EmailChangeSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True, max_length=128)
+    password = serializers.CharField(required=True, max_length=128)
+    new_email = serializers.EmailField(required=True, max_length=128)
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'new_email']
+
+    def update(self, instance: User, validated_data: Dict[str, Any]):
+        raise_errors_on_nested_writes('update', self, validated_data)
+        setattr(instance, 'email', validated_data.get('new_email'))
+        instance.save()
+
+        instance.email_address.tokens.all().delete()
+        instance.email_address.delete()
 
         return instance
