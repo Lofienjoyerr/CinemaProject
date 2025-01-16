@@ -9,7 +9,7 @@ from users.models import EmailAddress, EmailVerifyToken, PasswordResetToken
 User = get_user_model()
 
 
-def create_email(email: str, user: User):
+def create_email_and_token(email: str, user: User) -> str:
     email_address = EmailAddress.objects.create(email, user)
     return EmailVerifyToken.objects.create(email_address)
 
@@ -34,6 +34,22 @@ def get_user_by_email(email: str) -> User:
         return user
     except User.DoesNotExist:
         raise AuthenticationFailed
+
+
+def get_email_address(email: str) -> EmailAddress:
+    try:
+        email_address = EmailAddress.objects.get(email_address=email)
+        return email_address
+    except EmailAddress.DoesNotExist:
+        raise NotFound
+
+
+def get_email_address_active_tokens(email_address: EmailAddress):
+    return email_address.tokens.filter(created__gte=datetime.now() - EMAIL_CONFIRM_TIME)
+
+
+def get_password_active_tokens(user: User):
+    return user.password_tokens.filter(created__gte=datetime.now() - EMAIL_CONFIRM_TIME)
 
 
 def verify_email(token: str) -> bool:

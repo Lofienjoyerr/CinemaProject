@@ -117,6 +117,7 @@ class EmailVerifyToken(models.Model):
     token = models.CharField(max_length=64)
     created = models.DateTimeField(auto_now_add=True)
     email_address = models.ForeignKey('EmailAddress', on_delete=models.CASCADE, related_name='tokens')
+    duplicated = models.BooleanField(default=False)
 
     objects = EmailVerifyTokenManager()
 
@@ -132,6 +133,7 @@ class PasswordResetTokenManager(models.Manager):
 class PasswordResetToken(models.Model):
     token = models.CharField(max_length=64)
     created = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='password_token')
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='password_tokens')
+    duplicated = models.BooleanField(default=False)
 
     objects = PasswordResetTokenManager()
