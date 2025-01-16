@@ -1,7 +1,6 @@
 from typing import Type
 
 from django.contrib.auth import get_user_model
-
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView, CreateAPIView, UpdateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,8 +13,10 @@ from core.settings import EMAIL_CONFIRM_TIME
 from .permissions import IsOwnerOrIsAdmin, IsEmailOwnerOrIsAdmin, IsActive
 from .serializers import (AdminUsersListSerializer, UsersListSerializer,
                           AdminUserDetailSerializer, UserDetailSerializer, PasswordChangeSerializer, RegisterSerializer,
-                          EmailChangeSerializer, PasswordResetSerializer, PasswordResetVerifySerializer)
-from .services import create_email, get_user, verify_email, get_password_reset_token
+                          EmailChangeSerializer, PasswordResetSerializer, PasswordResetVerifySerializer,
+                          EmailResendSerializer, PasswordResendSerializer)
+from .services import get_user, verify_email, get_password_reset_token, create_email_and_token, get_email_address, \
+    get_email_address_active_tokens, get_user_by_email, get_password_active_tokens
 from .utils import send_email_verify, send_password_reset
 
 User = get_user_model()
@@ -81,11 +82,11 @@ class RegisterView(APIView):
             user = serializer.save()
             email = serializer.validated_data.get('email')
 
-            token = create_email(email, user)
+            token = create_email_and_token(email, user)
             send_email_verify(email, token)
 
             return Response({
-                'detail': f'Письмо для подтверждения email отправлено. Перейдите по ссылке внутри письма в течение {EMAIL_CONFIRM_TIME} минут'},
+                'detail': f'Письмо для подтверждения email отправлено. Перейдите по ссылке внутри письма в течение {EMAIL_CONFIRM_TIME.seconds // 60} минут'},
                 status=HTTP_201_CREATED)
         return Response({'detail': 'Пароли должны совпадать'}, status=HTTP_400_BAD_REQUEST)
 
@@ -110,9 +111,34 @@ class EmailChangeView(APIView):
             instance._prefetched_objects_cache = {}
 
         email = serializer.validated_data.get('new_email')
-        token = create_email(email, instance)
+        token = create_email_and_token(email, instance)
         send_email_verify(email, token)
 
+        return Response({
+            'detail': f'Письмо для подтверждения email отправлено. Перейдите по ссылке внутри письма в течение {EMAIL_CONFIRM_TIME.seconds // 60} минут'})
+
+
+class EmailResendView(APIView):
+    def post(self, request: Request) -> Response:
+        serializer = EmailResendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email_address = get_email_address(serializer.validated_data.get('email'))
+        tokens = get_email_address_active_tokens(email_address)
+        token = tokens.first()
+
+        if email_address.verified:
+            return Response(
+                {'detail': 'Данный адрес электронной почты уже активирован'}, status=HTTP_400_BAD_REQUEST)
+        if not tokens:
+            return Response({'detail': 'Данный адрес электронной почты не обнаружен'}, status=HTTP_400_BAD_REQUEST)
+        if token.duplicated:
+            return Response(
+                {'detail': f'Превышено количество попыток'}, status=HTTP_400_BAD_REQUEST)
+
+        token.duplicated = True
+        token.save()
+        send_email_verify(email_address.email_address, token.token)
         return Response({
             'detail': f'Письмо для подтверждения email отправлено. Перейдите по ссылке внутри письма в течение {EMAIL_CONFIRM_TIME.seconds // 60} минут'})
 
@@ -142,3 +168,26 @@ class PasswordResetVerifyView(CreateAPIView):
             serializer.save()
             return Response({'detail': 'Пароль успешно изменён'})
         return Response({'detail': 'Пароли должны совпадать'}, status=HTTP_400_BAD_REQUEST)
+
+
+class PasswordResendView(APIView):
+    def post(self, request: Request) -> Response:
+        serializer = PasswordResendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data.get('email')
+        user = get_user_by_email(email)
+        tokens = get_password_active_tokens(user)
+        token = tokens.first()
+
+        if not tokens:
+            return Response({'detail': 'Данный пользователь не обнаружен'}, status=HTTP_400_BAD_REQUEST)
+        if token.duplicated:
+            return Response(
+                {'detail': f'Превышено количество попыток'}, status=HTTP_400_BAD_REQUEST)
+
+        token.duplicated = True
+        token.save()
+        send_password_reset(email, token)
+        return Response({
+            'detail': f'Письмо для подтверждения email отправлено. Перейдите по ссылке внутри письма в течение {EMAIL_CONFIRM_TIME.seconds // 60} минут'})

@@ -8,7 +8,7 @@ def send_email_verify(email: str, token: str):
 Если это были Вы, то перейдите по следующему адресу, чтобы подтвердить почту
 http://127.0.0.1:8000/api/v1/email/verify/{token}/
 Если это были не Вы, проигнорируйте данное сообщение.""", from_email=None,
-              recipient_list=[email])
+              recipient_list=[email], fail_silently=True)
 
 
 def send_password_reset(email: str, token: PasswordResetToken):
@@ -16,4 +16,4 @@ def send_password_reset(email: str, token: PasswordResetToken):
 Если это были Вы, то перейдите по следующему адресу, чтобы сменить пароль
 http://127.0.0.1:8000/api/v1/password/reset/verify/{token.token}/
 Если это были не Вы, проигнорируйте данное сообщение.""", from_email=None,
-              recipient_list=[email])
+              recipient_list=[email], fail_silently=True)

@@ -180,3 +180,11 @@ class PasswordResetVerifySerializer(serializers.Serializer):
         instance.set_password(validated_data.get('password1'))
         instance.save()
         return instance
+
+
+class EmailResendSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, max_length=128)
+
+
+class PasswordResendSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, max_length=128)
