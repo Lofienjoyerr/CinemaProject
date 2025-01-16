@@ -10,7 +10,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 
 from users.authentication import JWTEmailOrPhoneBackend
-from users.services import create_email
+from users.models import PasswordResetToken
+from users.services import get_user_by_email
 
 User = get_user_model()
 
@@ -150,7 +151,7 @@ class EmailChangeSerializer(serializers.ModelSerializer):
         model = User
         fields = ['email', 'password', 'new_email']
 
-    def update(self, instance: User, validated_data: Dict[str, Any]):
+    def update(self, instance: User, validated_data: Dict[str, Any]) -> User:
         raise_errors_on_nested_writes('update', self, validated_data)
         setattr(instance, 'email', validated_data.get('new_email'))
         instance.save()
@@ -158,4 +159,24 @@ class EmailChangeSerializer(serializers.ModelSerializer):
         instance.email_address.tokens.all().delete()
         instance.email_address.delete()
 
+        return instance
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, max_length=128)
+
+    def create(self, validated_data: Dict[str, Any]) -> PasswordResetToken:
+        user = get_user_by_email(validated_data.get('email'))
+        instance = PasswordResetToken.objects.create(user)
+
+        return instance
+
+
+class PasswordResetVerifySerializer(serializers.Serializer):
+    password1 = serializers.CharField(required=True, max_length=128)
+    password2 = serializers.CharField(required=True, max_length=128)
+
+    def update(self, instance: User, validated_data: Dict[str, Any]):
+        instance.set_password(validated_data.get('password1'))
+        instance.save()
         return instance

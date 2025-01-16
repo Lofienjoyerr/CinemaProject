@@ -91,7 +91,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class EmailAddressManager(models.Manager):
-    def create(self, email_address: str, user: int):
+    def create(self, email_address: str, user: User):
         email_address = self.model(email_address=email_address, user=user)
         email_address.save(using=self._db)
         return email_address
@@ -106,7 +106,7 @@ class EmailAddress(models.Model):
 
 
 class EmailVerifyTokenManager(models.Manager):
-    def create(self, email_address: int) -> str:
+    def create(self, email_address) -> str:
         token = "".join([choice(ascii_letters) for _ in range(EMAIL_CONFIRM_TOKEN_LENGTH)])
         evt = self.model(token=token, email_address=email_address)
         evt.save(using=self._db)
@@ -119,3 +119,19 @@ class EmailVerifyToken(models.Model):
     email_address = models.ForeignKey('EmailAddress', on_delete=models.CASCADE, related_name='tokens')
 
     objects = EmailVerifyTokenManager()
+
+
+class PasswordResetTokenManager(models.Manager):
+    def create(self, user: User):
+        token = "".join([choice(ascii_letters) for _ in range(EMAIL_CONFIRM_TOKEN_LENGTH)])
+        prt = self.model(token=token, user=user)
+        prt.save(using=self._db)
+        return prt
+
+
+class PasswordResetToken(models.Model):
+    token = models.CharField(max_length=64)
+    created = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='password_token')
+
+    objects = PasswordResetTokenManager()
