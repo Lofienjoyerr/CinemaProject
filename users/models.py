@@ -83,12 +83,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        with Image.open(os.path.join(MEDIA_ROOT, self.avatar.name)) as im:
-            im = im.resize((220, 220))
-            im.save(os.path.join(MEDIA_ROOT, self.avatar.name))
-
 
 class EmailAddressManager(models.Manager):
     def create(self, email_address: str, user: User):

@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError as djValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 from rest_framework import serializers, exceptions
+from rest_framework.utils import model_meta
 from rest_framework.serializers import raise_errors_on_nested_writes
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import Token
@@ -12,6 +13,7 @@ from rest_framework_simplejwt.settings import api_settings
 from users.authentication import JWTEmailOrPhoneBackend
 from users.models import PasswordResetToken
 from users.services import get_user_by_email
+from users.utils import crop_avatar
 
 User = get_user_model()
 
@@ -29,6 +31,29 @@ class AdminUserDetailSerializer(serializers.ModelSerializer):
                   'is_active', 'is_superuser', 'is_staff',
                   'date_joined', 'last_login']
 
+    def update(self, instance, validated_data):
+        raise_errors_on_nested_writes('update', self, validated_data)
+        info = model_meta.get_field_info(instance)
+        is_avatar_updated = validated_data.get("avatar", instance.avatar) != instance.avatar
+
+        m2m_fields = []
+        for attr, value in validated_data.items():
+            if attr in info.relations and info.relations[attr].to_many:
+                m2m_fields.append((attr, value))
+            else:
+                setattr(instance, attr, value)
+
+        instance.save()
+
+        for attr, value in m2m_fields:
+            field = getattr(instance, attr)
+            field.set(value)
+
+        if is_avatar_updated:
+            crop_avatar(str(instance.avatar))
+
+        return instance
+
 
 class UserDetailSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
@@ -41,6 +66,29 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'email', 'phone', 'name', 'avatar', 'password',
                   'date_joined', 'last_login']
+
+    def update(self, instance, validated_data):
+        raise_errors_on_nested_writes('update', self, validated_data)
+        info = model_meta.get_field_info(instance)
+        is_avatar_updated = validated_data.get("avatar", instance.avatar) != instance.avatar
+
+        m2m_fields = []
+        for attr, value in validated_data.items():
+            if attr in info.relations and info.relations[attr].to_many:
+                m2m_fields.append((attr, value))
+            else:
+                setattr(instance, attr, value)
+
+        instance.save()
+
+        for attr, value in m2m_fields:
+            field = getattr(instance, attr)
+            field.set(value)
+
+        if is_avatar_updated:
+            crop_avatar(str(instance.avatar))
+
+        return instance
 
 
 class AdminUsersListSerializer(serializers.HyperlinkedModelSerializer):
